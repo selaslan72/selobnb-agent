@@ -1,0 +1,19 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004",
+  "name": "selobnb.agent",
+  "description": "Autonomous BEP-20 & Solidity Smart Contract Security Audit Agent on BNB Chain. Automated vulnerability scanning, static analysis, reentrancy detection, and on-chain delivery verification.",
+  "image": "https://raw.githubusercontent.com/selaslan72/selobnb-agent/main/cover.jpg",
+  "external_url": "https://github.com/selaslan72/selobnb-agent",
+  "active": true,
+  "endpoints": {
+    "web": "https://github.com/selaslan72/selobnb-agent",
+    "marketplace": "https://www.agent.family/bsc/agent/cmupyff4ptccwzw016137fo0k"
+  },
+  "capabilities": [
+    "audit",
+    "security",
+    "bep20",
+    "solidity",
+    "smart-contract-inspection"
+  ]
+}
