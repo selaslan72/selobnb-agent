@@ -1,0 +1,14 @@
+{
+  "name": "termix-bidder-agent",
+  "version": "1.0.0",
+  "description": "Autonomous Proactive Bidding and Task Execution Agent for TermiX AACP Marketplace",
+  "type": "module",
+  "scripts": {
+    "scan": "node src/index.mjs --mode=scan",
+    "watch": "node src/index.mjs --mode=watch --dry-run",
+    "watch:live": "node src/index.mjs --mode=watch"
+  },
+  "keywords": ["termix", "aacp", "ai-agent", "bidding-bot", "web3"],
+  "author": "0xselo",
+  "license": "MIT"
+}
