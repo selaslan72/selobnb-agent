@@ -6,9 +6,19 @@
   "scripts": {
     "scan": "node src/index.mjs --mode=scan",
     "watch": "node src/index.mjs --mode=watch --dry-run",
-    "watch:live": "node src/index.mjs --mode=watch"
+    "watch:live": "node src/index.mjs --mode=watch",
+    "test": "node --test"
   },
-  "keywords": ["termix", "aacp", "ai-agent", "bidding-bot", "web3"],
+  "keywords": [
+    "termix",
+    "aacp",
+    "ai-agent",
+    "bidding-bot",
+    "web3"
+  ],
   "author": "0xselo",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.17.0"
+  }
 }
