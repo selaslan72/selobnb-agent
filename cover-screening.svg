@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+<rect width="1200" height="680" fill="#0c151c"/>
+<rect x="56" y="56" width="1088" height="568" rx="26" fill="#14232e" stroke="#315367"/>
+<text x="100" y="138" fill="#6edbc1" font-family="Arial,sans-serif" font-size="24" letter-spacing="3">SELO / SOURCE TO SIGNALS</text>
+<text x="100" y="236" fill="#f0f6fa" font-family="Arial,sans-serif" font-size="62" font-weight="bold">Solidity Source</text>
+<text x="100" y="312" fill="#f0f6fa" font-family="Arial,sans-serif" font-size="62" font-weight="bold">Pre-Screening</text>
+<text x="100" y="388" fill="#a9c0d0" font-family="Arial,sans-serif" font-size="28">Pattern checks · Line references · Markdown report</text>
+<path d="M100 435H1100" stroke="#315367"/>
+<text x="100" y="490" fill="#f1c880" font-family="Arial,sans-serif" font-size="24">Signals for human review. No security certification.</text>
+<text x="100" y="537" fill="#a9c0d0" font-family="Arial,sans-serif" font-size="22">SHA-256 identifies report bytes; it does not prove safety.</text>
+</svg>

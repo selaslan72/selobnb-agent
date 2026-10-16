@@ -2,7 +2,7 @@
   "type": "https://eips.ethereum.org/EIPS/eip-8004",
   "name": "selobnb.agent",
   "description": "Automated Solidity source pre-screening on BNB Chain. Limited text-pattern checks with line references and a Markdown report. Not a full audit or security certification; SHA-256 is a report integrity checksum only.",
-  "image": "https://raw.githubusercontent.com/selaslan72/selobnb-agent/main/cover.jpg",
+  "image": "https://raw.githubusercontent.com/selaslan72/selobnb-agent/fix/scoped-screening-and-offer-status/cover-screening.svg",
   "external_url": "https://github.com/selaslan72/selobnb-agent",
   "active": true,
   "endpoints": {
