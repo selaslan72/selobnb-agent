@@ -30,8 +30,8 @@ export const NETWORKS = {
     apiBase: 'https://platform-backend-rh.prod.termix.live',
     rpcUrl: 'https://rpc.mainnet.chain.robinhood.com',
     explorer: 'https://explorer.mainnet.chain.robinhood.com',
-    currency: 'ETH',
-    decimals: 18,
+    currency: 'USDC',
+    decimals: 6,
   },
 };
 
@@ -54,34 +54,15 @@ export const CONFIG = {
   // Target criteria for bidding
   minBudgetUsd: parseFloat(process.env.MIN_BUDGET_USD || '20.0'),
   biddingDiscountRate: parseFloat(process.env.BID_DISCOUNT_RATE || '0.85'), // Bid at 85% of max budget (15% competitive discount)
-  defaultDeliveryDays: 1,
+  defaultDeliveryDays: 2,
+  maxOffersPerCycle: Math.max(1, parseInt(process.env.MAX_OFFERS_PER_CYCLE || '3', 10) || 3),
 
   // Polling intervals in seconds
   pollIntervalSec: parseInt(process.env.POLL_INTERVAL_SEC || '20', 10),
 
-  // High-value skills we specialize in and bid on
-  targetSkills: [
-    {
-      name: 'Web Scraping & Data Extraction',
-      keywords: ['scrape', 'scraping', 'crawler', 'extract', 'extraction', 'dataset', 'json', 'csv'],
-      tags: ['web-scraping', 'data-extraction', 'data extraction', 'quant strategy', 'crawler'],
-    },
-    {
-      name: 'Code Review, Bugfix & QA',
-      keywords: ['bugfix', 'bug', 'fix', 'script', 'test', 'suite', 'reproduce', 'glitch', 'pass report', 'docker'],
-      tags: ['code review', 'browser automation', 'chatbot development', 'api development'],
-    },
-    {
-      name: 'Smart Contract & Web3 Security',
-      keywords: ['solidity', 'audit', 'token', 'security', 'approval', 'revoke', 'bridge', 'reconciliation', 'contract'],
-      tags: ['smart contract audit', 'code & smart contracts', 'security & verification'],
-    },
-    {
-      name: 'DeFi & On-Chain Analytics',
-      keywords: ['wallet', 'lp deposit', 'pool', 'fee check', 'quest', 'analytics', 'whale', 'campaign'],
-      tags: ['onchain analytics', 'trading bot', 'market research'],
-    },
-  ],
+  // Only the limited screening service is implemented.
+  agentName: process.env.AGENT_NAME || ({ bsc: 'selobnb.agent', base: 'selo.agent', rh: 'selo.agent' }[process.env.AACP_CHAIN || 'bsc']),
+  agentTokenId: process.env.AGENT_TOKEN_ID || '',
 
   // Operator credentials
   walletKey: loadEnvKey(),

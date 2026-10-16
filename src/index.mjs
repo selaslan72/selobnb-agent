@@ -88,7 +88,7 @@ async function runScan(client, options) {
   console.log(`\n======================================================`);
   console.log(`📈 Summary:`);
   console.log(`• Total Matching Jobs: ${matched.length}`);
-  console.log(`• Total Potential Revenue: $${totalOpportunityUsd.toFixed(2)} USDC`);
+  console.log(`• Sum of proposed prices (not revenue): $${totalOpportunityUsd.toFixed(2)} USDC`);
   console.log(`======================================================\n`);
 
   return matched;
@@ -108,7 +108,7 @@ async function runWatch(client, options) {
 
   // Start autonomous order fulfillment worker
   const worker = new AutoDeliveryWorker(client);
-  worker.start(CONFIG.pollIntervalSec);
+  if (!options.dryRun) worker.start(CONFIG.pollIntervalSec);
 
   async function cycle() {
     try {
@@ -118,6 +118,7 @@ async function runWatch(client, options) {
 
       const items = await client.fetchDiscoverOrders(40);
       const matches = [];
+      let submittedThisCycle = 0;
 
       for (const item of items) {
         const evaluation = evaluateRequest(item);
@@ -148,7 +149,9 @@ async function runWatch(client, options) {
             simulated: true,
           });
         } else {
-          console.log(`🚀 Submitting live offer...`);
+          if (submittedThisCycle >= CONFIG.maxOffersPerCycle) continue;
+          submittedThisCycle++;
+          console.log(`🚀 Submitting scoped pre-screen offer...`);
           try {
             const res = await client.submitOffer(
               item.id,
@@ -164,6 +167,7 @@ async function runWatch(client, options) {
               skill: evaluation.matchedSkill,
               offerId: res.id,
               simulated: false,
+              status: res.id ? 'SUBMITTED' : 'UNVERIFIED',
             });
           } catch (bidErr) {
             console.error(`❌ Failed to submit bid:`, bidErr.message);

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { CONFIG } from './config.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,9 +11,8 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const chainName = process.env.AACP_CHAIN || 'base';
-const BIDS_FILE = path.join(DATA_DIR, `bids-${chainName}.json`);
-const LOGS_FILE = path.join(DATA_DIR, `history-${chainName}.json`);
+const bidsFile = () => path.join(DATA_DIR, `bids-${CONFIG.chain}.json`);
+const logsFile = () => path.join(DATA_DIR, `history-${CONFIG.chain}.json`);
 
 function loadJson(filePath, defaultValue) {
   try {
@@ -36,12 +36,12 @@ function saveJson(filePath, data) {
 
 export const Storage = {
   getBids() {
-    return loadJson(BIDS_FILE, {});
+    return loadJson(bidsFile(), {});
   },
 
   hasBid(orderId) {
     const bids = this.getBids();
-    return Boolean(bids[orderId]);
+    return Boolean(bids[orderId] && bids[orderId].simulated !== true);
   },
 
   recordBid(orderId, bidDetails) {
@@ -50,11 +50,11 @@ export const Storage = {
       ...bidDetails,
       timestamp: new Date().toISOString(),
     };
-    saveJson(BIDS_FILE, bids);
+    saveJson(bidsFile(), bids);
   },
 
   logEvent(event) {
-    const history = loadJson(LOGS_FILE, []);
+    const history = loadJson(logsFile(), []);
     history.push({
       ...event,
       timestamp: new Date().toISOString(),
@@ -63,6 +63,6 @@ export const Storage = {
     if (history.length > 500) {
       history.shift();
     }
-    saveJson(LOGS_FILE, history);
+    saveJson(logsFile(), history);
   },
 };

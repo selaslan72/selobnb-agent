@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { summarizeOffers } from './offer-status.mjs';
 import { Storage } from './storage.mjs';
 import { CONFIG, getActiveNetwork } from './config.mjs';
 
@@ -11,13 +12,8 @@ export function startDashboard(port = 3000, client, getLatestState) {
       if (req.url === '/api/state') {
         const state = getLatestState ? getLatestState() : {};
         const bids = Storage.getBids();
-        
-        const bidsList = Object.entries(bids).map(([orderId, data]) => ({
-          orderId,
-          ...data,
-        }));
 
-        const liveOffers = bidsList.filter(b => b.offerId || b.simulated === false);
+        const { counts, allBids: bidsList, liveOffers } = summarizeOffers(bids);
 
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({
@@ -28,6 +24,7 @@ export function startDashboard(port = 3000, client, getLatestState) {
             minBudget: CONFIG.minBudgetUsd,
             pollInterval: CONFIG.pollIntervalSec,
           },
+          recordCounts: counts,
           bidsCount: bidsList.length,
           liveOffersCount: liveOffers.length,
           liveOffers: liveOffers.slice(-30).reverse(),
@@ -53,10 +50,10 @@ export function startDashboard(port = 3000, client, getLatestState) {
   return server;
 }
 
-function renderHtml(net, port) {
+export function renderHtml(net, port) {
   const currentChain = net.name.toLowerCase().includes('base') ? 'base' : (net.name.toLowerCase().includes('robinhood') ? 'rh' : 'bsc');
   const badgeClass = currentChain === 'base' ? 'base' : (currentChain === 'rh' ? 'rh' : 'bnb');
-  const chainPrefix = currentChain === 'base' ? 'base/' : (currentChain === 'rh' ? 'rh/' : 'bsc/');
+
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -87,7 +84,7 @@ function renderHtml(net, port) {
     .badge.base { background: rgba(0, 82, 255, 0.15); color: #4b89ff; border-color: rgba(0, 82, 255, 0.3); }
     .badge.rh { background: rgba(0, 200, 5, 0.15); color: var(--accent-green); border-color: rgba(0, 200, 5, 0.3); }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    
+
     .switch-btn {
       display: inline-flex;
       align-items: center;
@@ -108,7 +105,7 @@ function renderHtml(net, port) {
     .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
     .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
     .stat-card .sub { font-size: 12px; color: var(--accent); margin-top: 4px; }
-    
+
     .nav-tabs { display: flex; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
     .tab-btn { background: none; border: none; color: var(--muted); font-size: 14px; font-weight: 600; padding: 8px 16px; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
     .tab-btn.active { background: #1c2130; color: #fff; border: 1px solid var(--border); }
@@ -134,7 +131,7 @@ function renderHtml(net, port) {
     <div class="title">
       <span>🤖 TermiX Operations Command</span>
       <span class="badge ${badgeClass}">${net.name} Daemon</span>
-      <span class="badge live">● 24/7 LIVE</span>
+      <span class="badge live">● PANEL ONLINE</span>
     </div>
     <div style="display: flex; gap: 8px; align-items: center;">
       <a href="http://91.99.209.113:3000" class="switch-btn" style="${currentChain === 'base' ? 'border-color: #3C8AFF; font-weight: bold;' : ''}">🔵 Base (:3000)</a>
@@ -146,14 +143,14 @@ function renderHtml(net, port) {
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="label">🚀 Live Official Offers Sent</div>
+      <div class="label">🚀 Offers with returned IDs</div>
       <div id="stat-live-offers" class="value" style="color: var(--accent);">0</div>
-      <div class="sub">Submitted to TermiX AACP</div>
+      <div class="sub">Recorded API submissions; not accepted jobs</div>
     </div>
     <div class="stat-card">
-      <div class="label">🎯 Pipeline Opportunities</div>
+      <div class="label">🎯 Local bid records</div>
       <div id="stat-bids" class="value">0</div>
-      <div class="sub">Identified by local radar</div>
+      <div class="sub">Includes simulations, conflicts and unverified records</div>
     </div>
     <div class="stat-card">
       <div class="label">Protocol Volume (USDC)</div>
@@ -161,14 +158,15 @@ function renderHtml(net, port) {
       <div class="sub">AACP Total Settlement</div>
     </div>
     <div class="stat-card">
-      <div class="label">Network Active Jobs</div>
+      <div class="label">Network total jobs</div>
       <div id="stat-jobs" class="value">Loading...</div>
-      <div class="sub">On-Chain Requests</div>
+      <div class="sub">Cumulative protocol metric, not open jobs</div>
     </div>
   </div>
 
+  <p id="record-status" style="margin-bottom:16px;color:#9aa5b5">Loading record breakdown...</p>
   <div class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('offers')">🚀 Gönderilen Canlı Teklifler (Submitted Live Offers)</button>
+    <button class="tab-btn active" onclick="switchTab('offers')">🚀 Teklif ID’si dönen kayıtlar (API Submissions)</button>
     <button class="tab-btn" onclick="switchTab('radar')">📡 Canlı Radar & Açık İşler (Marketplace Radar)</button>
   </div>
 
@@ -223,14 +221,20 @@ function renderHtml(net, port) {
       document.getElementById('tab-radar').style.display = tab === 'radar' ? 'block' : 'none';
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
     async function refresh() {
       try {
         const res = await fetch('/api/state');
         const data = await res.json();
 
-        document.getElementById('last-update').textContent = 'Ping: ' + new Date().toLocaleTimeString();
+        document.getElementById('last-update').textContent = 'Panel refreshed: ' + new Date().toLocaleTimeString() + ' · Last scan: ' + (data.lastScanAt || 'not yet completed');
         document.getElementById('stat-live-offers').textContent = data.liveOffersCount || 0;
         document.getElementById('stat-bids').textContent = data.bidsCount || 0;
+        const c = data.recordCounts || {};
+        document.getElementById('record-status').textContent = 'Submitted with ID: ' + (c.SUBMITTED || 0) + ' · Already quoted (conflicts): ' + (c.ALREADY_QUOTED || 0) + ' · Simulated: ' + (c.SIMULATED || 0) + ' · Unverified legacy records: ' + (c.UNVERIFIED || 0);
 
         if (data.networkStats) {
           document.getElementById('stat-volume').textContent = '$' + Number(data.networkStats.totalVolumeUsd).toLocaleString();
@@ -246,13 +250,13 @@ function renderHtml(net, port) {
             return \`
               <tr>
                 <td>\${idx + 1}</td>
-                <td><strong>\${o.title || 'Job Request'}</strong></td>
-                <td class="price-tag">\${o.proposedPrice} \${o.currency || 'USDC'}</td>
-                <td><span class="badge">\${o.skill || 'Smart Contract Audit'}</span></td>
-                <td><span class="id-code">\${o.offerId ? o.offerId.slice(0, 14) + '...' : 'N/A'}</span></td>
-                <td><span class="status-pill live">✅ LIVE OFFER</span></td>
+                <td><strong>\${escapeHtml(o.title || 'Job Request')}</strong></td>
+                <td class="price-tag">\${escapeHtml(o.proposedPrice)} \${escapeHtml(o.currency || 'USDC')}</td>
+                <td><span class="badge">\${escapeHtml(o.skill || 'Smart Contract Audit')}</span></td>
+                <td><span class="id-code">\${escapeHtml(o.offerId ? o.offerId.slice(0, 14) + '...' : 'N/A')}</span></td>
+                <td><span class="status-pill live">API SUBMISSION</span></td>
                 <td>
-                  <a href="https://www.agent.family/${chainPrefix}scan?tab=jobs" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 12px;">
+                  <a href="https://www.agent.family/scan?tab=jobs&chain=${currentChain}" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 12px;">
                     View on TermiX ↗
                   </a>
                 </td>
@@ -269,12 +273,12 @@ function renderHtml(net, port) {
         if (matches.length > 0) {
           matchesTbody.innerHTML = matches.map(m => \`
             <tr>
-              <td><strong>\${m.item.title}</strong></td>
-              <td>\${m.evaluation.budget} \${m.evaluation.currency}</td>
-              <td class="price-tag">\${m.evaluation.proposedPrice} \${m.evaluation.currency}</td>
-              <td><span class="badge">\${m.evaluation.matchedSkill}</span></td>
-              <td>\${(m.item.tags || []).slice(0, 3).map(t => \`<span class="tag">\${t}</span>\`).join('')}</td>
-              <td><span class="status-pill \${m.item.status === 'QUOTED' ? 'live' : 'open'}">\${m.item.status}</span></td>
+              <td><strong>\${escapeHtml(m.item.title)}</strong></td>
+              <td>\${escapeHtml(m.evaluation.budget)} \${escapeHtml(m.evaluation.currency)}</td>
+              <td class="price-tag">\${escapeHtml(m.evaluation.proposedPrice)} \${escapeHtml(m.evaluation.currency)}</td>
+              <td><span class="badge">\${escapeHtml(m.evaluation.matchedSkill)}</span></td>
+              <td>\${(m.item.tags || []).slice(0, 3).map(t => \`<span class="tag">\${escapeHtml(t)}</span>\`).join('')}</td>
+              <td><span class="status-pill \${m.item.status === 'QUOTED' ? 'live' : 'open'}">\${escapeHtml(m.item.status)}</span></td>
             </tr>
           \`).join('');
         }

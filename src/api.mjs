@@ -15,6 +15,20 @@ export class TermixApiClient {
     return this.auth.getValidToken();
   }
 
+  async authenticatedFetch(path, options = {}) {
+    let token = await this.getSessionToken();
+    if (!token) throw new Error('Authentication required');
+    const send = () => fetch(`${this.base}${path}`, {
+      ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` },
+    });
+    let res = await send();
+    if (res.status === 401) {
+      token = await this.auth.getValidToken(true);
+      if (token) res = await send();
+    }
+    return res;
+  }
+
   async fetchNetworkStats() {
     const res = await fetch(`${this.base}/api/v1/stats/network`);
     if (!res.ok) {
